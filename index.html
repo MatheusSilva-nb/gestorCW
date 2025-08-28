@@ -34,12 +34,16 @@
         async function fetchPedidos() {
             try {
                 const response = await fetch(endpointUrl);
+                // ...
                 const pedidos = await response.json();
                 const tbody = document.querySelector('#pedidosTable tbody');
-                
-                tbody.innerHTML = ''; // Limpa a tabela antes de preencher
-                
-                pedidos.forEach(pedido => {
+
+                tbody.innerHTML = ''; 
+
+                // Verifica se 'pedidos' é um array. Se não for, transforma em um array.
+                const pedidosArray = Array.isArray(pedidos) ? pedidos : [pedidos];
+
+                pedidosArray.forEach(pedido => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${pedido.loja_nome || 'N/A'}</td>
@@ -49,7 +53,7 @@
                     `;
                     tbody.appendChild(row);
                 });
-
+// ...
             } catch (error) {
                 console.error('Erro ao buscar pedidos:', error);
                 alert('Não foi possível carregar os pedidos. Verifique a URL do endpoint.');
