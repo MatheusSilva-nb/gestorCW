@@ -11,6 +11,17 @@
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
         th { background-color: #f2f2f2; }
         tr:nth-child(even) { background-color: #f9f9f9; }
+        .accept-btn {
+            background-color: #4CAF50; /* Verde */
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .accept-btn:hover {
+            background-color: #45a049;
+        }
     </style>
 </head>
 <body>
@@ -18,10 +29,12 @@
     <table id="pedidosTable">
         <thead>
             <tr>
+                <th>ID do Pedido</th>
                 <th>Nome da Loja</th>
                 <th>Nome do Cliente</th>
                 <th>Status</th>
                 <th>Horário do Pedido</th>
+                <th>Ação</th>
             </tr>
         </thead>
         <tbody>
@@ -29,37 +42,79 @@
     </table>
 
     <script>
-        const endpointUrl = 'https://matheussuporten2.app.n8n.cloud/webhook/dbpedidos';
+        const fetchEndpointUrl = 'https://matheussuporten2.app.n8n.cloud/webhook/dbpedidos';
+        // URL do NOVO Webhook para aceitar pedidos
+        const acceptEndpointUrl = 'https://matheussuporten2.app.n8n.cloud/webhook/aceitar'; // Substitua por sua nova URL
 
         async function fetchPedidos() {
             try {
-                const response = await fetch(endpointUrl);
-                const dados = await response.json(); // Pega o objeto completo
-                const pedidosArray = dados.data; // Acessa o array dentro da chave 'data'
-
+                const response = await fetch(fetchEndpointUrl);
+                const dados = await response.json();
+                const pedidosArray = dados.data;
                 const tbody = document.querySelector('#pedidosTable tbody');
-                tbody.innerHTML = ''; // Limpa a tabela
+
+                tbody.innerHTML = '';
 
                 if (pedidosArray && pedidosArray.length > 0) {
                     pedidosArray.forEach(pedido => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
+                            <td>${pedido.id_pedido || 'N/A'}</td>
                             <td>${pedido.id_loja || 'N/A'}</td>
                             <td>${pedido.nome_cliente || 'N/A'}</td>
                             <td>${pedido.status || 'N/A'}</td>
                             <td>${new Date(pedido.hora_criacao).toLocaleString()}</td>
+                            <td>
+                                <button class="accept-btn" 
+                                        data-order-id="${pedido.id_pedido}"
+                                        data-store-id="${pedido.id_loja}">
+                                    Aceitar Pedido
+                                </button>
+                            </td>
                         `;
                         tbody.appendChild(row);
                     });
+
+                    // Adiciona o evento de clique aos botões após criá-los
+                    document.querySelectorAll('.accept-btn').forEach(button => {
+                        button.addEventListener('click', handleAcceptClick);
+                    });
                 } else {
                     const row = document.createElement('tr');
-                    row.innerHTML = `<td colspan="4" style="text-align:center;">Nenhum pedido encontrado.</td>`;
+                    row.innerHTML = `<td colspan="6" style="text-align:center;">Nenhum pedido encontrado.</td>`;
                     tbody.appendChild(row);
                 }
 
             } catch (error) {
                 console.error('Erro ao buscar pedidos:', error);
-                alert('Não foi possível carregar os pedidos. Verifique a URL do endpoint.');
+                alert('Não foi possível carregar os pedidos.');
+            }
+        }
+
+        async function handleAcceptClick(event) {
+            const orderId = event.target.dataset.orderId;
+            const storeId = event.target.dataset.storeId;
+
+            if (confirm(`Tem certeza que deseja aceitar o pedido ${orderId}?`)) {
+                try {
+                    const response = await fetch(acceptEndpointUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ orderId: orderId, storeId: storeId })
+                    });
+                    
+                    if (response.ok) {
+                        alert('Pedido aceito com sucesso!');
+                        fetchPedidos(); // Recarrega a tabela para mostrar o novo status
+                    } else {
+                        alert('Erro ao aceitar o pedido. Tente novamente.');
+                    }
+                } catch (error) {
+                    console.error('Erro de conexão:', error);
+                    alert('Erro de conexão com o servidor.');
+                }
             }
         }
 
