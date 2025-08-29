@@ -22,6 +22,14 @@
         .accept-btn:hover {
             background-color: #45a049;
         }
+        .accepted-btn {
+            background-color: #6c757d; /* Cinza */
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: not-allowed; /* Altera o cursor */
+        }
     </style>
 </head>
 <body>
@@ -42,9 +50,8 @@
     </table>
 
     <script>
-        const fetchEndpointUrl = 'https://matheussuporten2.app.n8n.cloud/webhook/dbpedidos';
-        // URL do NOVO Webhook para aceitar pedidos
-        const acceptEndpointUrl = 'https://matheussuporten2.app.n8n.cloud/webhook/aceitar'; // Substitua por sua nova URL
+        const fetchEndpointUrl = 'https://matheuslimacw.app.n8n.cloud/webhook/dbpedidos';
+        const acceptEndpointUrl = 'https://matheuslimacw.app.n8n.cloud/webhook/aceitar';
 
         async function fetchPedidos() {
             try {
@@ -58,24 +65,35 @@
                 if (pedidosArray && pedidosArray.length > 0) {
                     pedidosArray.forEach(pedido => {
                         const row = document.createElement('tr');
+                        
+                        let actionCell = '';
+                        if (pedido.status === 'CREATED') {
+                            actionCell = `
+                                <button class="accept-btn" 
+                                        data-order-id="${pedido.id_pedido}"
+                                        data-store-id="${pedido.id_loja}">
+                                    Aceitar Pedido
+                                </button>
+                            `;
+                        } else {
+                            actionCell = `
+                                <button class="accepted-btn" disabled>
+                                    Aceito pelo gestor geral
+                                </button>
+                            `;
+                        }
+
                         row.innerHTML = `
                             <td>${pedido.id_pedido || 'N/A'}</td>
                             <td>${pedido.id_loja || 'N/A'}</td>
                             <td>${pedido.nome_cliente || 'N/A'}</td>
                             <td>${pedido.status || 'N/A'}</td>
                             <td>${new Date(pedido.hora_criacao).toLocaleString()}</td>
-                            <td>
-                                <button class="accept-btn" 
-                                        data-order-id="${pedido.id_pedido}"
-                                        data-store-id="${pedido.id_loja}">
-                                    Aceitar Pedido
-                                </button>
-                            </td>
+                            <td>${actionCell}</td>
                         `;
                         tbody.appendChild(row);
                     });
 
-                    // Adiciona o evento de clique aos botões após criá-los
                     document.querySelectorAll('.accept-btn').forEach(button => {
                         button.addEventListener('click', handleAcceptClick);
                     });
@@ -92,8 +110,9 @@
         }
 
         async function handleAcceptClick(event) {
-            const orderId = event.target.dataset.orderId;
-            const storeId = event.target.dataset.storeId;
+            const button = event.target;
+            const orderId = button.dataset.orderId;
+            const storeId = button.dataset.storeId;
 
             if (confirm(`Tem certeza que deseja aceitar o pedido ${orderId}?`)) {
                 try {
@@ -107,7 +126,12 @@
                     
                     if (response.ok) {
                         alert('Pedido aceito com sucesso!');
-                        fetchPedidos(); // Recarrega a tabela para mostrar o novo status
+                        // Atualiza a interface do botão para o estado de "Aceito"
+                        button.textContent = 'Aceito pelo gestor';
+                        button.classList.remove('accept-btn');
+                        button.classList.add('accepted-btn');
+                        button.disabled = true;
+
                     } else {
                         alert('Erro ao aceitar o pedido. Tente novamente.');
                     }
